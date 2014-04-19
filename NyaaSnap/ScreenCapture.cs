@@ -22,6 +22,7 @@ namespace NyaaSnap
         private static VP8Encoder Encoder = new VP8Encoder();
         private static Thread EncodeThread;
         private static Thread CaptureThread;
+        private static Object CaptureLock = new Object();
 
         // TODO: Maybe I can use threads to capture differn't sections of the screen and not have it blow up in my face?
         public static Bitmap CaptureScreen()
@@ -33,6 +34,7 @@ namespace NyaaSnap
                 using (Graphics g = Graphics.FromImage(bmpScreenCapture))
                 {
                     g.CopyFromScreen(CaptureX, CaptureY, 0, 0, bmpScreenCapture.Size, CopyPixelOperation.SourceCopy);
+                    g.Dispose();
                     return bmpScreenCapture;
                 }
             }
@@ -79,7 +81,14 @@ namespace NyaaSnap
                     {
                         watch.Restart();
 
-                        capture = CaptureScreen();
+                        lock (CaptureLock)
+                        {
+                            if (capture != null)
+                                capture.Dispose();
+
+                            capture = CaptureScreen();
+                        }
+
                         newCapture = true;
 
                         watch.Stop();
@@ -101,6 +110,7 @@ namespace NyaaSnap
                 }
             });
 
+            Bitmap EncodingBitmap;
             EncodeThread = new Thread(() =>
             {
                 CaptureThread.Start();
@@ -114,7 +124,13 @@ namespace NyaaSnap
                     {
                         if (newCapture)
                         {
-                            Encoder.EncodeFrame(capture);
+                            lock (CaptureLock)
+                            {
+                                EncodingBitmap = (Bitmap)capture.Clone();
+                            }
+
+                            Encoder.EncodeFrame(EncodingBitmap);
+                            EncodingBitmap.Dispose();
                             newCapture = false;
                         }
                     }
