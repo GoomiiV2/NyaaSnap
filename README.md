@@ -4,7 +4,7 @@ NyaaSnap
 A webm screen recorder and automatic uploader in one :D
 
 <p align="center">
-  <img src="http://i.imgur.com/tz9QBwU.png" align="center" />
+  <img src="https://raw.githubusercontent.com/GoomiChan/NyaaSnap/master/Media/Preview.png" align="center" />
 </p>
 
 <h3> Example Output: </h3>
