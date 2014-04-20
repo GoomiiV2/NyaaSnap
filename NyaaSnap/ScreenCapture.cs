@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Timers;
@@ -13,6 +14,12 @@ namespace NyaaSnap
 {
     class ScreenCapture
     {
+        [DllImport("gdi32.dll", EntryPoint = "DeleteDC")]
+        static extern bool DeleteDC([In] IntPtr hdc);
+
+        [DllImport("kernel32.dll", EntryPoint = "CopyMemory")]
+        static extern void CopyMemory(IntPtr destination, IntPtr source, uint length);
+
         public static int CaptureX = 0;
         public static int CaptureY = 0;
         public static int CaptureWidth = 0;
@@ -20,28 +27,47 @@ namespace NyaaSnap
         public static bool IsRecording = false;
 
         private static VP8Encoder Encoder = new VP8Encoder();
-        private static Thread EncodeThread;
+        private const int maxEncodeThreads = 1;
+        private static Thread[] EncodeThreads;
+        private static int EncodeThreadsFinished = 0;
         private static Thread CaptureThread;
         private static Object CaptureLock = new Object();
 
+        private static Bitmap Capture;
+        private static Queue<Bitmap> CaptureQueue;
+        private static Graphics GfxContext;
+
         // TODO: Maybe I can use threads to capture differn't sections of the screen and not have it blow up in my face?
-        public static Bitmap CaptureScreen()
+        public static void CaptureScreen()
         {
             try
             {
-                Bitmap bmpScreenCapture = new Bitmap(CaptureWidth, CaptureHeight, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
-
-                using (Graphics g = Graphics.FromImage(bmpScreenCapture))
+                lock (GfxContext)
                 {
-                    g.CopyFromScreen(CaptureX, CaptureY, 0, 0, bmpScreenCapture.Size, CopyPixelOperation.SourceCopy);
-                    g.Dispose();
-                    return bmpScreenCapture;
+                    GfxContext.CopyFromScreen(CaptureX, CaptureY, 0, 0, Capture.Size, CopyPixelOperation.SourceCopy);
+
+                    return;
+                    using (Bitmap bmp = new Bitmap(CaptureWidth, CaptureHeight, System.Drawing.Imaging.PixelFormat.Format24bppRgb))
+                    {
+                        using (Graphics g = Graphics.FromImage(bmp))
+                        {
+                            g.CopyFromScreen(CaptureX, CaptureY, 0, 0, bmp.Size, CopyPixelOperation.SourceCopy);
+                        }
+
+                        /*var temp = bmp.LockBits(new Rectangle(0, 0, CaptureWidth, CaptureHeight), ImageLockMode.ReadOnly, PixelFormat.Format24bppRgb);
+                        var temp2 = Capture.LockBits(new Rectangle(0, 0, CaptureWidth, CaptureHeight), ImageLockMode.WriteOnly, PixelFormat.Format24bppRgb);
+                        uint size = (uint)temp.Stride;
+                        size = size * (uint)temp.Height;
+                        CopyMemory(temp2.Scan0, temp.Scan0, size);
+                        bmp.UnlockBits(temp);
+                        Capture.UnlockBits(temp2);*/
+                    }
                 }
             }
             catch (Exception e)
             {
-                // This can't possabley hurt, right, right!?
-                return CaptureScreen();
+                Debug.WriteLine("CaptureScreen Error: " + e.ToString());
+                IsRecording = false;
             }
         }
 
@@ -55,52 +81,53 @@ namespace NyaaSnap
         {
             Encoder.Flush();
 
+            Capture = new Bitmap(CaptureWidth, CaptureHeight, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
+            GfxContext = Graphics.FromImage(Capture);
+            CaptureQueue = new Queue<Bitmap>(500);
+
             IsRecording = true;
-
-            if (EncodeThread != null)
-            {
-                EncodeThread.Abort();
-                EncodeThread = null;
-            }
-
-            if (CaptureThread != null)
-            {
-                CaptureThread.Abort();
-                CaptureThread = null;
-            }
-
-            bool newCapture = false;
-            Bitmap capture = null;
 
             CaptureThread = new Thread(() =>
             {
+                Encoder.InitSession(CaptureWidth, CaptureHeight, fps);
+                Stopwatch watch = Stopwatch.StartNew();
+                long loops = 100;
+                long elapsed = 0;
+                long total = 0;
+                byte[] capPixels = new byte[(int)((CaptureWidth*3) * CaptureHeight)];
+                Bitmap temp;
+
                 try
                 {
-                    var watch = Stopwatch.StartNew();
-                    while (true)
+                    while (IsRecording)
                     {
                         watch.Restart();
-
-                        lock (CaptureLock)
+                        CaptureScreen();
+                        lock (GfxContext)
                         {
-                            if (capture != null)
-                                capture.Dispose();
-
-                            capture = CaptureScreen();
+                            temp = (Bitmap)Capture.Clone(new Rectangle(0, 0, CaptureWidth, CaptureHeight), PixelFormat.Format24bppRgb);
+                            //lock (CaptureQueue)
+                            {
+                                CaptureQueue.Enqueue(temp);
+                            }
                         }
-
-                        newCapture = true;
 
                         watch.Stop();
-                        var elapsedMs = watch.ElapsedMilliseconds;
+                        elapsed = watch.ElapsedMilliseconds;
+                        total += elapsed;
 
-                        if (elapsedMs < (1000 / fps))
+                        loops++;
+                        if (loops >= 100)
                         {
-                            Thread.Sleep((int)((1000 / fps) - elapsedMs));
+                            Debug.WriteLine("Average Capture Time: " + total / loops);
+                            loops = total = 0;
                         }
+
+                        if (elapsed < (1000 / fps))
+                            Thread.Sleep((int)((1000 / fps) - elapsed));
                         else
                         {
-                            Debug.WriteLine("Capture is too slow D:");
+                            Debug.WriteLine("Too slow");
                         }
                     }
                 }
@@ -110,61 +137,83 @@ namespace NyaaSnap
                 }
             });
 
-            Bitmap EncodingBitmap;
-            EncodeThread = new Thread(() =>
+            CaptureThread.Start();
+
+            EncodeThreads = new Thread[maxEncodeThreads];
+            EncodeThreadsFinished = 0;
+
+            for (int i = 0; i < maxEncodeThreads; i++)
             {
-                CaptureThread.Start();
-
-                try
-                {
-                    Encoder.InitSession(CaptureWidth, CaptureHeight, fps);
-
-                    var watch = Stopwatch.StartNew();
-                    while (true)
-                    {
-                        if (newCapture)
-                        {
-                            lock (CaptureLock)
-                            {
-                                EncodingBitmap = (Bitmap)capture.Clone();
-                            }
-
-                            Encoder.EncodeFrame(EncodingBitmap);
-                            EncodingBitmap.Dispose();
-                            newCapture = false;
-                        }
-                    }
-                }
-                catch (ThreadAbortException e)
-                {
-
-                }
-            });
-
-            EncodeThread.Start();
-
-            /*Encoder.InitSession(CaptureWidth, CaptureHeight, fps, filePath);
-
-            aTimer = new System.Timers.Timer(1000 / fps);
-
-            // Hook up the Elapsed event for the timer.
-            aTimer.Elapsed += new ElapsedEventHandler(VP8CaptureFrame);
-
-            aTimer.Enabled = true;*/
+                EncodeThreads[i] = new Thread(EncodeWorker);
+                EncodeThreads[i].Start();
+            }
         }
 
-        private static void VP8CaptureFrame()
+        private static void EncodeWorker()
         {
-            var frame = CaptureScreen();
-            Encoder.EncodeFrame(frame);
+            Stopwatch watch = Stopwatch.StartNew();
+            long loops = 0;
+            long total = 0;
+            bool hasStuffToEncode = false;
+            Bitmap temp = null;
+
+            try
+            {
+                while (true)
+                {
+                    // Get a frame to encode
+                    lock (CaptureQueue)
+                    {
+                        if (CaptureQueue.Count > 0)
+                            temp = CaptureQueue.Dequeue(); //.Clone(new Rectangle(0, 0, CaptureWidth, CaptureHeight), PixelFormat.Format24bppRgb);
+                    }
+
+                    // Encode
+                    if (temp != null)
+                    {
+                        watch.Restart();
+
+                        Encoder.EncodeFrame(temp);
+
+                        temp.Dispose();
+                        temp = null;
+
+                        watch.Stop();
+                        total += watch.ElapsedMilliseconds;
+                    }
+                    else
+                        Thread.Sleep(5);
+
+                    loops++;
+                    if (loops >= 100)
+                    {
+                        Debug.WriteLine("Average Encode Time: " + total / loops);
+                        loops = total = 0;
+                    }
+
+                    if ((!IsRecording && CaptureQueue.Count == 0))
+                        break;
+                }
+
+                Debug.WriteLine("Encode thread finished!");
+
+                EncodeThreadsFinished++;
+
+                if (EncodeThreadsFinished >= maxEncodeThreads)
+                {
+                    Debug.WriteLine("All encoding threads have stoped.");
+                    Encoder.Stop();
+                }
+            }
+            catch (ThreadAbortException e)
+            {
+
+            }
         }
 
         public static void StopVP8Capture()
         {
-            EncodeThread.Abort();
-            CaptureThread.Abort();
             IsRecording = false;
-            Encoder.Stop();
         }
 
         public static void SaveVP8Capture(string filePath)
@@ -180,6 +229,25 @@ namespace NyaaSnap
         public static void Flush()
         {
             Encoder.Flush();
+        }
+
+        public static void BenchMarkCapture(int width, int height)
+        {
+            Stopwatch watch = Stopwatch.StartNew();
+            Bitmap bmp = new Bitmap(width, height, PixelFormat.Format24bppRgb);
+            Graphics gfx = Graphics.FromImage(bmp);
+            int loops = 100;
+            long total = 0;
+
+            for (int i = 0; i <= loops; i++)
+            {
+                watch.Restart();
+                gfx.CopyFromScreen(0, 0, 0, 0, bmp.Size, CopyPixelOperation.SourceCopy);
+                watch.Stop();
+                total += watch.ElapsedMilliseconds;
+            }
+
+            MessageBox.Show("Average capture time: " + total / loops);
         }
     }
 }

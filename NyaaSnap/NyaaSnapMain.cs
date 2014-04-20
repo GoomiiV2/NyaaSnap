@@ -16,11 +16,20 @@ namespace NyaaSnap
     {
         [DllImport("user32")]
         public static extern bool PostMessage(IntPtr hwnd, int msg, IntPtr wparam, IntPtr lparam);
+
+        // Get that Aero crap the hell out of here, kills capture times D:
+        const uint DWM_EC_DISABLECOMPOSITION = 0;
+        const uint DWM_EC_ENABLECOMPOSITION = 1;
+
+        [DllImport("dwmapi.dll", EntryPoint = "DwmEnableComposition")]
+        extern static uint DwmEnableComposition(uint compositionAction);
+
         private const int WINDOWPOSCHANGING = 0x0046;
 
         private long recordStartTime;
         private Point lastDims;
         private Point windowOffset = new Point(16, 70); // window padding to add to previewWindow
+        private Point maxSize = new Point(1080, 720);
 
         private string saveAction = "";
 
@@ -47,6 +56,8 @@ namespace NyaaSnap
             self = this;
 
             InitializeComponent();
+
+            DwmEnableComposition(DWM_EC_DISABLECOMPOSITION);
 
             Upii = new Uploader();
 
@@ -95,6 +106,12 @@ namespace NyaaSnap
                 wpos.cx = ((((w) / 16) + 1) * 16) + windowOffset.X;
                 wpos.cy = ((((h) / 16) + 1) * 16) + windowOffset.Y;
 
+                if (wpos.cx > maxSize.X)
+                    wpos.cx = maxSize.X;
+
+                if (wpos.cy > maxSize.Y)
+                    wpos.cy = maxSize.Y;
+
                 lastDims = new Point(wpos.cx, wpos.cy);
             }
 
@@ -107,7 +124,7 @@ namespace NyaaSnap
             hasARecording = true;
 
             if (!recToggle)
-                ScreenCapture.StartVP8Capture(16);
+                ScreenCapture.StartVP8Capture(20);
             else
                 ScreenCapture.StopVP8Capture();
 
@@ -175,6 +192,9 @@ namespace NyaaSnap
 
         private void BTT_Save_Click(object sender, EventArgs e)
         {
+            /*ScreenCapture.BenchMarkCapture(SystemInformation.PrimaryMonitorSize.Width, SystemInformation.PrimaryMonitorSize.Height);
+            return;*/
+
             if (!hasARecording)
             {
                 MessageBox.Show("Umm, you need to record something first.");

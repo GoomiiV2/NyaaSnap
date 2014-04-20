@@ -70,10 +70,11 @@
     <Reference Include="System.Xml" />
     <Reference Include="VP8.NET, Version=0.0.0.0, Culture=neutral, PublicKeyToken=09518d7e616e1267, processorArchitecture=x86">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\..\Code\VP8.NET\VP8.NET\bin\Win32\Debug\VP8.NET.dll</HintPath>
+      <HintPath>..\..\..\..\Code\VP8.NET\VP8.NET\bin\Win32\Release\VP8.NET.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="MultiThreadedScreenCaper.cs" />
     <Compile Include="SplitButton.cs">
       <SubType>Component</SubType>
     </Compile>
@@ -138,6 +139,7 @@
     <None Include="Resources\Icon.png" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Resources\VP8.NET.dll" />
     <None Include="bin\x86\Release\Newtonsoft.Json.dll" />
     <Content Include="Icon.ico" />
     <None Include="Resources\Ui.jpg" />

@@ -2,8 +2,10 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -66,6 +68,19 @@ namespace NyaaSnap
             bw.Write(data);
         }
 
+        public void WriteIvfFrameHeader(int pckSize)
+        {
+            Int64 pts = (Environment.TickCount & Int32.MaxValue) * 10000000 * 1 / fps;
+            //int temp = (int)(pts & 0xFFFFFFFF);
+            //int temp2 = (pts >> 32);
+
+            bw.Write((uint)pckSize);
+            bw.Write(pts);
+
+            //bw.Write((int)temp);
+            //bw.Write((int)temp2);
+        }
+
         public void EncodeFrame(Bitmap frame)
         {
             if (!isEncoding)
@@ -73,9 +88,19 @@ namespace NyaaSnap
 
             //if ((frameNum % keyFrameEveryN) == 0)
                 //Encoder.ForceKeyframe();
+            /*var temp = frame.LockBits(new Rectangle(0, 0, frame.Width, frame.Height), ImageLockMode.ReadOnly, PixelFormat.Format24bppRgb);
+            byte[] buff = new byte[temp.Stride * temp.Height];
+            Marshal.Copy(temp.Scan0, buff, 0, buff.Length);
+            bw.Write(buff);
+            frame.UnlockBits(temp);*/
 
-            var data = Encoder.Encode(frame);
-            bw.Write(data);
+            byte[] data = Encoder.Encode(frame);
+
+            lock (bw)
+            {
+                //WriteIvfFrameHeader(data.Length);
+                bw.Write(data);
+            }
 
             frameNum++;
         }
