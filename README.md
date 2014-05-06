@@ -1,6 +1,9 @@
 NyaaSnap
 ========
 
+[![Build status](https://ci.appveyor.com/api/projects/status/ivdxoen1sr71n9aa)](https://ci.appveyor.com/project/GoomiChan/nyaasnap)
+
+
 A webm screen recorder and automatic uploader in one :D
 
 <p align="center">
