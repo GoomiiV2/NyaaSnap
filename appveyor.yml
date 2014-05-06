@@ -30,4 +30,4 @@ artifacts:
 
   # pushing a single file with environment variable in path and "Deployment name" specified
   - path: NyaaSnap\NyaaSnap\bin\x86\Release\NyaaSnap.exe
-	name: NyaaSnap.exe
+    name: NyaaSnap.exe
