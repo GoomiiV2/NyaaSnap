@@ -25,5 +25,6 @@ clone_folder: c:\projects\NyaaSnap
 
 artifacts:
   # pushing a single file with environment variable in path and "Deployment name" specified
-  - path: NyaaSnap\NyaaSnap\bin\x86\Release
+  - path: NyaaSnap\NyaaSnap\bin\x86\Debug
     name: NyaaSnap.exe
+    type: zip
