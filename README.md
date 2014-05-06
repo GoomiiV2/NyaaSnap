@@ -1,7 +1,7 @@
 NyaaSnap
 ========
 
-[![Build status](https://ci.appveyor.com/api/projects/status/ivdxoen1sr71n9aa)](https://ci.appveyor.com/project/GoomiChan/nyaasnap)
+<img src="https://ci.appveyor.com/api/projects/status/ivdxoen1sr71n9aa"/>
 
 
 A webm screen recorder and automatic uploader in one :D
