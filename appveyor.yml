@@ -12,6 +12,9 @@ version: 1.0.{build}
 # Operating system (build VM template)
 os: Windows Server 2012
 
+platform: x86
+configuration: Release
+
 # scripts that are called at very beginning, before repo cloning
 init:
   - git config --global core.autocrlf input
@@ -24,10 +27,7 @@ clone_folder: c:\projects\NyaaSnap
 #---------------------------------#
 
 artifacts:
-
-  # pushing a single file
-  - path: NyaaSnap.zip
-
   # pushing a single file with environment variable in path and "Deployment name" specified
-  - path: NyaaSnap\NyaaSnap\bin\x86\Release\NyaaSnap.exe
-	name: NyaaSnap.exe
+  - path: NyaaSnap\bin\x86\Release\NyaaSnap.exe
+    name: NyaaSnap.zip
+    type: zip

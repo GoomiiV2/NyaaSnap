@@ -1,6 +1,9 @@
 NyaaSnap
 ========
 
+<img src="https://ci.appveyor.com/api/projects/status/ivdxoen1sr71n9aa?retina=true" height="22px"/>
+
+
 A webm screen recorder and automatic uploader in one :D
 
 <p align="center">
