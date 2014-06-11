@@ -1,4 +1,5 @@
-﻿using System;
+﻿using NyaaSnap.Uploaders;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -49,26 +50,30 @@ namespace NyaaSnap
         }
 
         public static Uploader Upii;
+        public static UploadManager UpMan;
 
+        public static ProgressWindow progressWindow;
 
         public NyaaSnapMain()
         {
             self = this;
 
             InitializeComponent();
+            UpMan = new UploadManager();
 
-            DwmEnableComposition(DWM_EC_DISABLECOMPOSITION);
-
-            Upii = new Uploader();
+            progressWindow = new ProgressWindow();
 
             saveAction = "Save to file";
             BTT_Save.Text = saveAction;
             CM_FileDests.Items.Add(saveAction);
 
-            foreach (string ety in Upii.Hosts.Keys)
+            foreach (string ety in UpMan.GetUploaders())
                 CM_FileDests.Items.Add(ety);
 
             SetCaptureDims();
+
+            if (MessageBox.Show("Temporaly set the window style to basic? \nBasic will improve the capture preformance by a whole lot so please say yes.", "Enable Windows Aero Basic?", MessageBoxButtons.YesNo) == DialogResult.Yes)
+                DwmEnableComposition(DWM_EC_DISABLECOMPOSITION);
         }
 
         protected override void WndProc(ref Message m)
@@ -218,7 +223,7 @@ namespace NyaaSnap
             else
             {
                 LBL_Uploading.Text = "Uploading...";
-                ScreenCapture.UploadVP8Capture(Upii, saveAction);
+                ScreenCapture.UploadVP8Capture(UpMan, saveAction);
                 LBL_Uploading.Text = "";
             }
         }
@@ -232,6 +237,19 @@ namespace NyaaSnap
         private void CM_FileDests_Opening(object sender, ToolStripItemClickedEventArgs e)
         {
 
+        }
+
+        public static void onEncodeStart()
+        {
+            progressWindow.Show(true, "Encodeing...", "Encoding.........");
+        }
+
+        public static void onEncodeProgress(int current, int max)
+        {
+            progressWindow.SetPrecent(current, max);
+
+            if (current >= max)
+                progressWindow.Show(false, "", "");
         }
     }
 }

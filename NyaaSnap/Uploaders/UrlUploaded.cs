@@ -16,6 +16,9 @@ namespace NyaaSnap
         Bitmap[] images = null;
         Random rand = new Random();
 
+        public delegate void closeCallback();
+        private closeCallback callback = null;
+
         public UrlUploaded()
         {
             InitializeComponent();
@@ -39,23 +42,38 @@ namespace NyaaSnap
 
         public void Show(string url)
         {
-            var loc = PointToScreen(NyaaSnapMain.self.Location);
-            this.Location = new Point(loc.X + 50, loc.Y + 50);
+            var loc = NyaaSnapMain.self.Location;
+            var bounds = NyaaSnapMain.self.Bounds;
+            var thisBounds = this.Bounds;
+            this.Location = new Point(loc.X + ((bounds.Width / 2)) - (thisBounds.Width / 2),
+                loc.Y + ((bounds.Height / 2) - (thisBounds.Height / 2)));
 
             PBIcon.Image = images[rand.Next(images.Length)];
             this.Show();
             LBL_URL.Text = url;
         }
 
+        public void Show(string url, closeCallback cb)
+        {
+            this.Show(url);
+            callback = cb;
+        }
+
         private void BTT_OK_Click(object sender, EventArgs e)
         {
             this.Hide();
+
+            if (callback != null)
+                callback();
         }
 
         private void UrlUploaded_FormClosing(object sender, FormClosingEventArgs e)
         {
             e.Cancel = true;
             this.Hide();
+
+            if (callback != null)
+                callback();
         }
 
         private void LBL_URL_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)

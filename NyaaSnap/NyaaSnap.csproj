@@ -74,14 +74,23 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ProgressWindow.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="ProgressWindow.Designer.cs">
+      <DependentUpon>ProgressWindow.cs</DependentUpon>
+    </Compile>
     <Compile Include="MultiThreadedScreenCaper.cs" />
     <Compile Include="SplitButton.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="UrlUploaded.cs">
+    <Compile Include="Uploaders\UploadBase.cs" />
+    <Compile Include="Uploaders\UploadManager.cs" />
+    <Compile Include="Uploaders\UP_Pomf.cs" />
+    <Compile Include="Uploaders\UrlUploaded.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="UrlUploaded.Designer.cs">
+    <Compile Include="Uploaders\UrlUploaded.Designer.cs">
       <DependentUpon>UrlUploaded.cs</DependentUpon>
     </Compile>
     <Compile Include="NyaaSnapMain.cs">
@@ -93,9 +102,12 @@
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ScreenCapture.cs" />
-    <Compile Include="Uploader.cs" />
+    <Compile Include="Uploaders\Uploader.cs" />
     <Compile Include="VP8Encoder.cs" />
-    <EmbeddedResource Include="UrlUploaded.resx">
+    <EmbeddedResource Include="ProgressWindow.resx">
+      <DependentUpon>ProgressWindow.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Uploaders\UrlUploaded.resx">
       <DependentUpon>UrlUploaded.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="NyaaSnapMain.resx">

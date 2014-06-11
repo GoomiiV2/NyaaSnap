@@ -1,4 +1,5 @@
-﻿using System;
+﻿using NyaaSnap.Uploaders;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -146,7 +147,7 @@ namespace NyaaSnap
             EncodeToWebm(filePath);
         }
 
-        public void Upload(Uploader uper, string host)
+        public void Upload(UploadManager uper, string host)
         {
             string webm = Path.GetTempFileName();
             File.Delete(webm);
@@ -154,9 +155,7 @@ namespace NyaaSnap
 
             EncodeToWebm(webm);
 
-            uper.UploadFile(webm, host);
-
-            File.Delete(webm);
+            uper.Upload(host, webm);
         }
 
         public void Flush()

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using NyaaSnap.Uploaders;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -156,11 +157,19 @@ namespace NyaaSnap
             long total = 0;
             bool hasStuffToEncode = false;
             Bitmap temp = null;
+            int totalFrames = 0;
 
             try
             {
                 while (true)
                 {
+                    // If encoding and not recording show the progress
+                    if (totalFrames == 0 && !IsRecording && CaptureQueue.Count > 0)
+                    {
+                        NyaaSnapMain.onEncodeStart();
+                        totalFrames = CaptureQueue.Count;
+                    }
+
                     // Get a frame to encode
                     lock (CaptureQueue)
                     {
@@ -191,8 +200,15 @@ namespace NyaaSnap
                         loops = total = 0;
                     }
 
+                    // Update the progress
+                    if (!IsRecording && CaptureQueue.Count != 0)
+                        NyaaSnapMain.onEncodeProgress(CaptureQueue.Count, totalFrames);
+
                     if ((!IsRecording && CaptureQueue.Count == 0))
+                    {
+                        NyaaSnapMain.onEncodeProgress(0, 100);
                         break;
+                    }
                 }
 
                 Debug.WriteLine("Encode thread finished!");
@@ -221,7 +237,7 @@ namespace NyaaSnap
             Encoder.Save(filePath);
         }
 
-        public static void UploadVP8Capture(Uploader uper, string host)
+        public static void UploadVP8Capture(UploadManager uper, string host)
         {
             Encoder.Upload(uper, host);
         }
