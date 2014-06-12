@@ -49,7 +49,6 @@ namespace NyaaSnap
             public int flags;
         }
 
-        public static Uploader Upii;
         public static UploadManager UpMan;
 
         public static ProgressWindow progressWindow;
